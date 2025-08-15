@@ -1,0 +1,121 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>AI Negotiator PWA</title>
+  <meta name="theme-color" content="#0f172a" />
+  <link rel="manifest" href="manifest.webmanifest" />
+  <link rel="icon" href="icons/icon-192.png" />
+  <style>
+    :root { --bg:#0f172a; --card:#111827; --text:#e5e7eb; --muted:#9ca3af; --accent:#22c55e; --danger:#ef4444; }
+    *{ box-sizing:border-box; }
+    body{ margin:0; font-family: system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, 'Helvetica Neue', Arial; background:linear-gradient(180deg,#0b1220,#0f172a); color:var(--text); }
+    header{ position:sticky; top:0; backdrop-filter:saturate(180%) blur(8px); background:rgba(15,23,42,0.7); border-bottom:1px solid #1f2937; padding:12px 16px; display:flex; align-items:center; gap:12px; }
+    header img{ width:32px; height:32px; }
+    header h1{ font-size:18px; margin:0; letter-spacing:.4px; }
+    main{ max-width:1100px; margin:18px auto; padding:0 16px 48px; display:grid; grid-template-columns: 360px 1fr; gap:18px; }
+    .card{ background:var(--card); border:1px solid #1f2937; border-radius:16px; box-shadow: 0 10px 30px rgba(0,0,0,0.25); }
+    .panel{ padding:16px; }
+    .title{ font-size:14px; color:var(--muted); letter-spacing:.6px; text-transform:uppercase; margin-bottom:10px; }
+    label{ font-size:12px; color:var(--muted); display:block; margin-bottom:6px; }
+    input, select{ width:100%; padding:12px 12px; border-radius:12px; border:1px solid #293241; background:#0b1220; color:var(--text); }
+    input[type=number]{ appearance:textfield; }
+    .row{ display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+    button{ all:unset; cursor:pointer; background:#10b981; padding:12px 16px; border-radius:12px; color:#082f26; font-weight:700; text-align:center; }
+    button.secondary{ background:#334155; color:#e5e7eb; }
+    button.danger{ background:var(--danger); color:#fff; }
+    .actions{ display:flex; gap:10px; margin-top:12px; }
+    .transcript{ padding:0; margin:0; list-style:none; max-height:520px; overflow:auto; }
+    .bubble{ display:flex; gap:10px; padding:12px 14px; border-top:1px solid #1f2937; }
+    .who{ font-size:11px; color:#94a3b8; width:100px; flex-shrink:0; text-transform:uppercase; letter-spacing:.3px; }
+    .msg{ font-size:14px; line-height:1.4; }
+    .status{ padding:14px; border-top:1px dashed #334155; font-weight:700; }
+    .ok{ color:var(--accent); } .no{ color:var(--danger); }
+    .badge{ display:inline-block; font-size:11px; padding:4px 8px; border-radius:999px; background:#0b1220; border:1px solid #293241; color:#a5b4fc; margin-left:8px; }
+    .small{ font-size:12px; color:var(--muted); }
+    .footer{ text-align:center; margin-top:14px; color:#64748b; font-size:12px;}
+    .code{ font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; }
+  </style>
+</head>
+<body>
+  <header>
+    <img src="icons/icon-192.png" alt="icon" />
+    <h1>AI Negotiator <span class="badge">PWA</span></h1>
+  </header>
+
+  <main>
+    <section class="card panel">
+      <div class="title">Scenario</div>
+      <div class="row">
+        <div>
+          <label>Product</label>
+          <input id="product" placeholder="e.g., mango" value="mango"/>
+        </div>
+        <div>
+          <label>Quantity (kg)</label>
+          <input id="qty" type="number" min="0.25" step="0.25" value="2" />
+        </div>
+      </div>
+      <div class="row" style="margin-top:10px;">
+        <div>
+          <label>Buyer target price (₹ / kg)</label>
+          <input id="buyerPrice" type="number" min="1" step="1" value="125" />
+        </div>
+        <div>
+          <label>Seller ask price (₹ / kg)</label>
+          <input id="sellerPrice" type="number" min="1" step="1" value="135" />
+        </div>
+      </div>
+      <div class="row" style="margin-top:10px;">
+        <div>
+          <label>Market (reference) price (₹ / kg)</label>
+          <input id="marketPrice" type="number" min="1" step="1" value="130" />
+        </div>
+        <div>
+          <label>Max rounds</label>
+          <input id="rounds" type="number" min="1" step="1" value="6" />
+        </div>
+      </div>
+      <div style="margin-top:10px;">
+        <label>Persona</label>
+        <select id="persona">
+          <option value="diplomat" selected>🕊️ Smooth Diplomat</option>
+          <option value="aggressive">⚡ Aggressive Trader</option>
+          <option value="analyst">📊 Data-Driven Analyst</option>
+          <option value="wildcard">🎭 Creative Wildcard</option>
+          <option value="combo">🧪 Mix (rotate each round)</option>
+        </select>
+      </div>
+      <div class="actions">
+        <button id="run">Run negotiation</button>
+        <button class="secondary" id="reset">Clear transcript</button>
+      </div>
+
+      <div style="margin-top:12px;">
+        <div class="title">About</div>
+        <div class="small">This app simulates a bargaining conversation between a buyer and seller. Choose a persona to change the negotiation style. The engine aims for a mutually acceptable price bounded by the market price and each party’s thresholds.</div>
+      </div>
+
+      <div class="footer">Installable PWA: Add to Home Screen • Offline-ready</div>
+    </section>
+
+    <section class="card">
+      <div class="panel">
+        <div class="title">Transcript</div>
+      </div>
+      <ul id="transcript" class="transcript"></ul>
+      <div id="status" class="status"></div>
+    </section>
+  </main>
+
+  <script src="app.js"></script>
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('service-worker.js');
+      });
+    }
+  </script>
+</body>
+</html>
